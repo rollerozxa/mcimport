@@ -6,6 +6,7 @@ import sys
 import logging
 from block import *
 import content
+from pathlib import Path
 
 logging.basicConfig(level=logging.INFO)
 
@@ -13,33 +14,33 @@ if (sys.version_info < (3, 0)):
 	print("This script does not work with Python < 3.0, sorry.")
 	exit(1)
 
-if not os.path.exists(sys.argv[1]):
+if not Path(sys.argv[1]).exists():
 	print("The provided minecraft world path does not exist.")
 	exit(1)
 
-if not os.path.exists(sys.argv[2]):
+if not Path(sys.argv[2]).exists():
 	os.makedirs(sys.argv[2])
 
-if os.path.exists(sys.argv[2] + "map.sqlite"):
-	print("A minetest world already exists - refusing to overwrite it.")
-	exit(1)
+#if Path(sys.argv[2] +"/map.sqlite").exists():
+#	print("A minetest world already exists - refusing to overwrite it.")
+#	exit(1)
 
-if os.environ["GAME_ID"] == "MTG":
-	if not os.path.exists(sys.argv[2] + "/world.mt"):
-		with open(sys.argv[2] + "/world.mt", "w") as wo:
-			wo.write("backend = sqlite3\n")
+if not Path(sys.argv[2] + "/world.mt").exists():
+	with open(sys.argv[2] + "/world.mt", "w") as wo:
+		for backend in ['', 'player_', 'auth', 'mod_storage_']:
+			wo.write(f"{backend}_backend = sqlite3\n")
+
+		if os.environ["GAME_ID"] == "MTG":
 			wo.write("gameid = minetest\n")
-elif os.environ["GAME_ID"] == "MCL2":
-	if not os.path.exists(sys.argv[2] + "/world.mt"):
-		with open(sys.argv[2] + "/world.mt", "w") as wo:
-			wo.write("backend = sqlite3\n")
-			wo.write("gameid = mineclone2\n")
+		elif os.environ["GAME_ID"] == "MCL2":
+			wo.write("gameid = miniclonia\n")
 
-if not os.path.exists(sys.argv[2] + "/worldmods"):
+
+if not Path(sys.argv[2] + "/worldmods").exists():
 	os.makedirs(sys.argv[2]+"/worldmods")
-if not os.path.exists(sys.argv[2] + "/worldmods/mcimport"):
+if not Path(sys.argv[2] + "/worldmods/mcimport").exists():
 	os.makedirs(sys.argv[2]+"/worldmods/mcimport")
-if not os.path.exists(sys.argv[2]+"/worldmods/mcimport/init.lua"):
+if not Path(sys.argv[2]+"/worldmods/mcimport/init.lua").exists():
 	with open(sys.argv[2]+"/worldmods/mcimport/init.lua", "w") as sn:
 		sn.write("-- map conversion requires a special water level\n")
 		sn.write("minetest.set_mapgen_params({water_level = -2})\n\n")
@@ -47,18 +48,10 @@ if not os.path.exists(sys.argv[2]+"/worldmods/mcimport/init.lua"):
 		sn.write("minetest.set_mapgen_params({chunksize = 1})\n\n")
 		sn.write("-- comment the line below if you want to enable mapgen (will destroy things!)\n")
 		sn.write("minetest.set_mapgen_params({mgname = \"singlenode\"})\n\n")
-		sn.write("-- Comment out set_lighting fix. Not necessary, and causes error spam in Minetest v5.x\n")
-		sn.write("-- below lines will recalculate lighting on map block load\n")
-		sn.write("minetest.register_on_generated(function(minp, maxp, seed)\n")
-		sn.write("        local vm = minetest.get_voxel_manip(minp, maxp)\n")
-		sn.write("--      vm:set_lighting({day = 15, night = 0}, minp, maxp)\n")
-		sn.write("        vm:update_liquids()\n")
-		sn.write("        vm:write_to_map()\n")
-		sn.write("        vm:update_map()\n")
-		sn.write("end)\n\n")
+		sn.write("\n\n")
 
 if os.environ["GAME_ID"] == "MTG":
-	if not os.path.exists(sys.argv[2]+"/get-mods.sh"):
+	if not Path(sys.argv[2]+"/get-mods.sh").exists():
 		path = sys.argv[2]+"/get-mods.sh"
 		with open(path, "w") as md:
 					md.write('''\

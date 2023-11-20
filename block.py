@@ -11,13 +11,14 @@ from serialize import *
 from itemstack import *
 from tile_entities import te_convert
 from entities import e_convert
+from pathlib import Path
 
 logger = logging.getLogger('block')
 
 class MCMap:
 	"""A MC map"""
 	def __init__(self, path):
-		self.world_path = os.path.join(path, "region")
+		self.world_path = Path(path+"/region")
 		self.chunk_pos = []
 		for ext in ["mca", "mcr"]:
 			filenames = [i for i in os.listdir(self.world_path)
@@ -32,7 +33,7 @@ class MCMap:
 			s = filename.split(".")
 			cx, cz = int(s[1])*32, int(s[2])*32
 
-			with open(os.path.join(self.world_path, filename), "rb") as f:
+			with open(Path(self.world_path / filename), "rb") as f:
 				for chkx in range(cx, cx+32):
 					for chkz in range(cz, cz+32):
 						offset = ((chkx%32) + 32*(chkz%32))*4
@@ -67,8 +68,7 @@ class MCMap:
 class MCChunk:
 	"""A 16x16 column of nodes"""
 	def __init__(self, chkx, chkz, path, ext):
-		filename = os.path.join(path,
-			"r.{}.{}.{}".format(chkx//32, chkz//32, ext))
+		filename = Path(path, f"r.{chkx//32}.{chkz//32}.{ext}")
 		with open(filename, "rb") as f:
 			ofs = ((chkx%32) + 32*(chkz%32))*4
 			f.seek(ofs)
@@ -479,7 +479,7 @@ class MTMap:
 		self.blocks = self.fromMCMapBlocksIterator(mcmap, nimap, ct)
 
 	def save(self):
-		conn = sqlite3.connect(os.path.join(self.world_path, "map.sqlite"))
+		conn = sqlite3.connect(Path(self.world_path+"/map.sqlite"))
 		cur = conn.cursor()
 
 		cur.execute("CREATE TABLE IF NOT EXISTS `blocks` (\
