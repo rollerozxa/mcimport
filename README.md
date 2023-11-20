@@ -86,7 +86,7 @@ WARNING[Emerge-0]: VoxelManip:set_lighting called for a non-mapgen VoxelManip ob
 
 It's recommended to comment it out to avoid this issue.
 ```
-        -- vm:set_lighting({day = 15, night = 0}, minp, maxp)
+-- vm:set_lighting({day = 15, night = 0}, minp, maxp)
 ```
 
 

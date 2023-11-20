@@ -33,7 +33,7 @@ if [ -d "${HOME}/.minetest/worlds/$OUT" ]; then
 fi
 
 if [ $? == 0 ]; then
-`zenity --question --width=800 --title="Select a game for the converted map?" --text="Would you like mcimport to convert the map for use in Minetest Game or MineClone2?" --ok-label="Minetest Game" --cancel-label="MineClone2"`
+`zenity --question --width=800 --title="Select a game for the converted map?" --text="Would you like mcimport to convert the map for use in Minetest Game or MineClone2? Converting to MineClone2 is recommended as it generally supports the conversion of blocks better." --ok-label="Minetest Game" --cancel-label="MineClone2"`
 	if [ $? == 0 ]; then
 		zenity --info --width=800 --title="Conversion in progress" --text="The conversion is now running and may take a *very* long time to finish. Do not be alarmed by output lines that show \"Unknown Minecraft Block\" messages, this is normal and can usually be ignored without issues. You can safely close this window." &
 
