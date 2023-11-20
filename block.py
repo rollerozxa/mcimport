@@ -12,6 +12,7 @@ from itemstack import *
 from tile_entities import te_convert
 from entities import e_convert
 from pathlib import Path
+import zstd
 
 logger = logging.getLogger('block')
 
@@ -361,8 +362,10 @@ class MTBlock:
 			block, p2, meta = f(e)
 
 	def save(self):
+		os_raw = BytesIO()
+		writeU8(os_raw, 29) # Version
+
 		os = BytesIO()
-		writeU8(os, 25) # Version
 
 		#flags
 		flags = 0x00
@@ -373,11 +376,13 @@ class MTBlock:
 		flags |= 0x08           #generated
 		writeU8(os, flags)
 
-		writeU8(os, 2) # content_width
-		writeU8(os, 2) # params_width
+		writeU16(os, 0xFFFF) # lighting_complete
 
-		cbuffer = BytesIO()
+		writeU32(os, 0xffffffff) # timestamp
+
+
 		# Bulk node data
+		nbuffer = BytesIO()
 		content = self.content
 		k = 0
 		nimap = {}
@@ -386,13 +391,12 @@ class MTBlock:
 		for z in range(16):
 			for y in range(16):
 				for x in range(16):
-					#writeU16(cbuffer, content[k])
 					c = content[k]
 					if c in nimap:
-						writeU16(cbuffer, nimap[c])
+						writeU16(nbuffer, nimap[c])
 					else:
 						nimap[c] = first_free_content
-						writeU16(cbuffer, first_free_content)
+						writeU16(nbuffer, first_free_content)
 						rev_nimap.append(c)
 						first_free_content += 1
 					k += 1
@@ -403,7 +407,7 @@ class MTBlock:
 		for z in range(16):
 			for y in range(16):
 				for x in range(16):
-					writeU8(cbuffer, param1[k])
+					writeU8(nbuffer, param1[k])
 					k += 1
 				k += (256-16)
 			k += (16-16*256)
@@ -412,33 +416,10 @@ class MTBlock:
 		for z in range(16):
 			for y in range(16):
 				for x in range(16):
-					writeU8(cbuffer, param2[k])
+					writeU8(nbuffer, param2[k])
 					k += 1
 				k += (256-16)
 			k += (16-16*256)
-		os.write(zlib.compress(cbuffer.getvalue()))
-
-		# Nodemeta
-		meta = self.metadata
-
-		cbuffer = BytesIO()
-		writeU8(cbuffer, 1) # Version
-		writeU16(cbuffer, len(meta))
-		for pos, data in meta.items():
-			writeU16(cbuffer, (pos[2]<<8)|(pos[1]<<4)|pos[0])
-			writeU32(cbuffer, len(data[0]))
-			for name, val in data[0].items():
-				writeString(cbuffer, name)
-				writeLongString(cbuffer, str(val))
-			serialize_inv(cbuffer, data[1])
-		os.write(zlib.compress(cbuffer.getvalue()))
-
-		# Static objects
-		writeU8(os, 0) # Version
-		writeU16(os, 0) # Number of objects
-
-		# Timestamp
-		writeU32(os, 0xffffffff) # BLOCK_TIMESTAMP_UNDEFINED
 
 		# Name-ID mapping
 		writeU8(os, 0) # Version
@@ -446,6 +427,29 @@ class MTBlock:
 		for i in range(len(rev_nimap)):
 			writeU16(os, i)
 			writeString(os, self.name_id_mapping[rev_nimap[i]])
+
+		writeU8(os, 2) # content_width
+		writeU8(os, 2) # params_width
+
+		os.write(nbuffer.getvalue())
+
+		# Nodemeta
+		meta = self.metadata
+
+		writeU8(os, 0) # Version
+		# TODO
+		"""writeU16(os, len(meta))
+		for pos, data in meta.items():
+			writeU16(os, (pos[2]<<8)|(pos[1]<<4)|pos[0])
+			writeU32(os, len(data[0]))
+			for name, val in data[0].items():
+				writeString(os, name)
+				writeLongString(os, str(val))
+			serialize_inv(os, data[1])"""
+
+		# Static objects
+		writeU8(os, 0) # Version
+		writeU16(os, 0) # Number of objects
 
 		# Node timer
 		writeU8(os, 2+4+4) # Timer data len
@@ -457,7 +461,7 @@ class MTBlock:
 			writeU32(os, self.timers[i][1])
 			writeU32(os, self.timers[i][2])
 
-		return os.getvalue()
+		return os_raw.getvalue()+zstd.compress(os.getvalue())
 
 class MTMap:
 	def __init__(self, path):
